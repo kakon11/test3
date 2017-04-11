@@ -3,7 +3,7 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package preference_filterthenverifysw;
+package prefquery_filterthenverify;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -17,12 +17,12 @@ import java.util.StringTokenizer;
  *
  * @author Kakon
  */
-public class Preference_FilterthenVerifySW {
+public class Prefquery_FilterthenVerify {
 
     public static ArrayList<Tuple> tuples; // tuples collection
     public static int total_cluster;    //total number of clusters
-    public static Group1 cluster[];    //Pareto-optimal objects: c'    
-    public static Group2 groups[][]; //Pareto-optimal objects: jth user of ith cluster
+    public static Group cluster[];    //Pareto-optimal objects: c'    
+    public static Group groups[][]; //Pareto-optimal objects: jth user of ith cluster
     public static int total_group; //total number of groups in current cluster 
     public static int total_dimension;
     public static int dimension_no[];
@@ -37,7 +37,6 @@ public class Preference_FilterthenVerifySW {
     public static boolean matrix[][][][][];
     public static boolean incomparableSet[][][][];
     public static long start_time, single_tuple_time, cumulative_time;
-    public static int window_size;
 
     public static void load_Data(String data) throws FileNotFoundException, IOException {
         File data_file = new File(data);
@@ -93,7 +92,6 @@ public class Preference_FilterthenVerifySW {
 
         boolean isPareto = true;
 
-        //repair Pareto frontier w.r.t. in
         if (cluster[clusterNo].pareto_obtimal_objects.isEmpty() == false) {
             for (int j = 0; j < cluster[clusterNo].pareto_obtimal_objects.size(); j++) {
                 boolean isIncomparble = false;
@@ -142,201 +140,9 @@ public class Preference_FilterthenVerifySW {
             }
         }
 
-        if (isPareto) {//in is a Pareto-optimal object
+        if (isPareto) {
             cluster[clusterNo].pareto_obtimal_objects.add(tuple_id);
         }
-        //repair Pareto buffer w.r.t. in
-        if (cluster[clusterNo].buffer.isEmpty() == false) {
-            for (int j = 0; j < cluster[clusterNo].buffer.size(); j++) {
-                boolean isIncomparble = false;
-                int dominate = 0;
-                int dominated = 0;
-                int dom_count = 0;
-                int id = cluster[clusterNo].buffer.get(j);
-
-                for (int k = 0; k < total_dimension; k++) {
-                    int dom = comparison(tuples.get(tuple_id).measure_values[k], tuples.get(id).measure_values[k], matrix_cluster[k][clusterNo]);
-
-                    if (dom == 1) {
-                        dom_count++;
-                    } else if (dom == -1) {
-                        isIncomparble = true;
-                        break;
-                    } else if (dom == 2) {
-                        dominate++;
-                    } else if (dom == -2) {
-                        dominated++;
-                    }
-
-                    if (dominate > 0 && dominated > 0) {
-                        isIncomparble = true;
-                        break;
-                    }
-                }
-
-                if (dom_count == total_dimension) {
-                    break;
-                }
-
-                if (isIncomparble == false && dominated > 0) {
-                    break;
-                }
-
-                if (dominate > 0 && dominated == 0) {
-                    cluster[clusterNo].buffer.removeAt(j);
-                    j--;
-                }
-            }
-        }
-
-        cluster[clusterNo].buffer.add(tuple_id);
-
-        //repair Pareto frontier w.r.t. out
-        if (tuple_id >= window_size) {
-            int out = tuple_id - window_size;
-
-            cluster[clusterNo].buffer.remove(out);//discard out from Pareto buffer
-
-            boolean isPareto2 = true;
-
-            //if Pareto frontier contains outgoing object
-            if (cluster[clusterNo].pareto_obtimal_objects.contains(out)) {
-                if (cluster[clusterNo].buffer.isEmpty() == false) {
-                    //check: whether out dominates an object id in buffer
-                    for (int j = 0; j < cluster[clusterNo].buffer.size(); j++) {
-                        boolean isIncomparble = false;
-                        int dominate = 0;
-                        int dominated = 0;
-                        int dom_count = 0;
-                        int id = cluster[clusterNo].buffer.get(j);
-
-                        for (int k = 0; k < total_dimension; k++) {
-                            int dom = comparison(tuples.get(out).measure_values[k], tuples.get(id).measure_values[k], matrix_cluster[k][clusterNo]);
-
-                            if (dom == 1) {
-                                dom_count++;
-                            } else if (dom == -1) {
-                                isIncomparble = true;
-                                break;
-                            } else if (dom == 2) {
-                                dominate++;
-                            } else if (dom == -2) {
-                                dominated++;
-                            }
-
-                            if (dominate > 0 && dominated > 0) {
-                                isIncomparble = true;
-                                break;
-                            }
-                        }
-
-                        if (dom_count == total_dimension) {
-                            break;
-                        }
-                        if (isIncomparble == false && dominated > 0) {
-                            break;
-                        }
-                        if (dominate > 0 && dominated == 0) {//id dominated by out
-                            //check whther id dominated by any other Pareto-optimal object
-                            for (int m = 0; m < cluster[clusterNo].pareto_obtimal_objects.size(); m++) {
-                                boolean isIncomparble2 = false;
-                                int dominate2 = 0;
-                                int dominated2 = 0;
-                                int dom_count2 = 0;
-                                int id2 = cluster[clusterNo].pareto_obtimal_objects.get(m);
-                                for (int n = 0; n < total_dimension; n++) {
-                                    int dom = comparison(tuples.get(id).measure_values[n], tuples.get(id2).measure_values[n], matrix_cluster[n][clusterNo]);
-
-                                    if (dom == 1) {
-                                        dom_count2++;
-                                    } else if (dom == -1) {
-                                        isIncomparble2 = true;
-                                        break;
-                                    } else if (dom == 2) {
-                                        dominate2++;
-                                    } else if (dom == -2) {
-                                        dominated2++;
-                                    }
-
-                                    if (dominate2 > 0 && dominated2 > 0) {
-                                        isIncomparble2 = true;
-                                        break;
-                                    }
-                                }
-                                if (dom_count2 == total_dimension) {
-                                    break;
-                                }
-
-                                if (isIncomparble2 == false && dominated2 > 0) {
-                                    isPareto2 = false;
-                                    break;
-                                }
-                            }
-
-                            if (isPareto2) {//id is a Pareto-optimal object
-                                cluster[clusterNo].pareto_obtimal_objects.add(id);
-                                //check: whether id belongs to the Pareto fronier of any corresponding user
-                                for (int l = 0; l < total_group; l++) {
-                                    int d = 0;
-
-                                    for (; d < total_dimension; d++) {
-                                        if (incomparableSet[d][clusterNo][l][tuples.get(tuple_id).measure_values[d]] == true) {
-                                            break;
-                                        }
-                                    }
-
-                                    if (d == total_dimension) {
-                                        continue;
-                                    }
-                                    boolean isPareto3 = true;
-
-                                    if (groups[clusterNo][l].pareto_obtimal_objects.isEmpty() == false) {
-                                        for (int j2 = 0; j2 < groups[clusterNo][l].pareto_obtimal_objects.size(); j2++) {
-                                            boolean isIncomparble3 = false;
-                                            int dominate3 = 0;
-                                            int dominated3 = 0;
-                                            int dom_count3 = 0;
-
-                                            int id3 = groups[clusterNo][l].pareto_obtimal_objects.get(j2);
-
-                                            for (int k2 = 0; k2 < total_dimension; k2++) {
-                                                int dom = comparison(tuples.get(id).measure_values[k2], tuples.get(id3).measure_values[k2], matrix[k2][clusterNo][l]);
-
-                                                if (dom == 1) {
-                                                    dom_count++;
-                                                } else if (dom == -1) {
-                                                    isIncomparble3 = true;
-                                                    break;
-                                                } else if (dom == 2) {
-                                                    dominate3++;
-                                                } else if (dom == -2) {
-                                                    dominated3++;
-                                                }
-                                                if (dominate3 > 0 && dominated3 > 0) {
-                                                    isIncomparble3 = true;
-                                                    break;
-                                                }
-                                            }
-                                            if (dom_count3 == total_dimension) {
-                                                break;
-                                            }
-                                            if (isIncomparble3 == false && dominated3 > 0) {
-                                                isPareto3 = false;
-                                                break;
-                                            }
-                                        }
-                                    }
-                                    if (isPareto3) {
-                                        groups[clusterNo][l].pareto_obtimal_objects.add(id);
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
         return isPareto;
     }
 
@@ -419,13 +225,11 @@ public class Preference_FilterthenVerifySW {
         args[2]=dataset
         args[3]=user profiles
         args[4]=objects
-        args[5]=window size
          */
-        total_dimension = Integer.parseInt(args[1]);        
-        window_size = Integer.parseInt(args[5]);
+        total_dimension = Integer.parseInt(args[1]);
         
         load_Data(args[4]);
-
+        
         File data_groupNo = new File(args[0]);
         BufferedReader readerGroupNo = new BufferedReader(new FileReader(data_groupNo));
         String lineGN = readerGroupNo.readLine();
@@ -464,8 +268,8 @@ public class Preference_FilterthenVerifySW {
             }
         }
 
-        groups = new Group2[total_cluster][];
-        cluster = new Group1[total_cluster];
+        groups = new Group[total_cluster][];
+        cluster = new Group[total_cluster];
         matrix = new boolean[total_dimension][total_cluster][][][];
         incomparableSet = new boolean[total_dimension][total_cluster][][];
         matrix_cluster = new boolean[total_dimension][total_cluster][][];
@@ -473,8 +277,8 @@ public class Preference_FilterthenVerifySW {
 
         for (int k = 0; k < total_cluster; k++) {
             total_group = groupNo[k];
-            cluster[k] = new Group1();
-            groups[k] = new Group2[total_group];
+            cluster[k] = new Group();
+            groups[k] = new Group[total_group];
 
             for (int d = 0; d < total_dimension; d++) {
                 matrix[d][k] = new boolean[total_group][dimension_no[d]][dimension_no[d]];
@@ -494,6 +298,7 @@ public class Preference_FilterthenVerifySW {
                     for (int c = 0; c < dimension_no[d]; c++) {
                         matrix_cluster[d][k][r][c] = Byte.parseByte(tokenizer.nextToken()) == 1 ? true : false;
                         incomparableSetCluster[d][k][r] = incomparableSetCluster[d][k][c] = true;
+
                     }
 
                     r++;
@@ -506,7 +311,7 @@ public class Preference_FilterthenVerifySW {
             }
 
             for (int i = 0; i < total_group; i++) {
-                groups[k][i] = new Group2();
+                groups[k][i] = new Group();
 
                 for (int d = 0; d < total_dimension; d++) {
                     File data_file = new File(args[3] + k + "\\user" + i + ".txt");
@@ -535,7 +340,7 @@ public class Preference_FilterthenVerifySW {
                 }
             }
         }
-        
+
         for (int i = 0; i < tuples.size(); i++) {
             for (int k = 0; k < total_cluster; k++) {
                 start_time = System.currentTimeMillis();
@@ -545,9 +350,20 @@ public class Preference_FilterthenVerifySW {
                 single_tuple_time = System.currentTimeMillis() - start_time;
                 cumulative_time += single_tuple_time;
             }
+            if (i % 10000 == 0) {
+                System.out.print(i + "," + cumulative_time);
+
+                int pareto_here = 0;
+
+                for (int m = 0; m < total_cluster; m++) {
+                    for (int n = 0; n < groups[m].length; n++) {
+                        pareto_here += groups[m][n].pareto_obtimal_objects.size();
+                    }
+                }
+
+                System.out.println("," + pareto_here);
+            }
         }
-        
-        System.out.println(cumulative_time);
 
         System.out.println("#############################");
 
@@ -559,5 +375,4 @@ public class Preference_FilterthenVerifySW {
             }
         }
     }
-
 }
